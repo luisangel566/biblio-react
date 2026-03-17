@@ -1,30 +1,49 @@
-import { useEffect, useState } from 'react' // [EXISTENTE]
-import { useNavigate } from 'react-router-dom' // [EXISTENTE]
-import { listarLibros, eliminarLibro } from '../api/libros' // [MODIFICADO]
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { listarLibros, eliminarLibro } from '../api/libros'
 
 function ListadoLibros() {
-  const [libros, setLibros] = useState([]) // [EXISTENTE]
-  const navegar = useNavigate() // [EXISTENTE]
+  const [libros, setLibros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const navegar = useNavigate()
 
-  // [EXISTENTE]
   const cargarLibros = async () => {
-    const data = await listarLibros()
-    setLibros(data)
+    try {
+      setLoading(true)
+      const data = await listarLibros()
+      setLibros(data)
+    } catch (error) {
+      console.error('Error al cargar libros:', error)
+      alert('Error al cargar los libros')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // [EXISTENTE]
-  const inicializar = () => {
+  useEffect(() => {
     cargarLibros()
-  }
+  }, [])
 
-  useEffect(inicializar, []) // [EXISTENTE]
-
-  // [NUEVO]
   const manejarEliminar = async (id) => {
-    const confirmado = confirm('¿Estás seguro de que deseas eliminar este libro?')
+    const confirmado = window.confirm('¿Estás seguro de eliminar este libro?')
     if (!confirmado) return
-    await eliminarLibro(id)
-    cargarLibros()
+
+    try {
+      await eliminarLibro(id)
+      setLibros((prev) => prev.filter((libro) => libro.id !== id)) // ⚡ evita recargar todo
+    } catch (error) {
+      console.error('Error al eliminar:', error)
+      alert('No se pudo eliminar el libro')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center mt-5">
+        <div className="spinner-border text-warning"></div>
+        <p className="mt-2">Cargando libros...</p>
+      </div>
+    )
   }
 
   return (
@@ -33,43 +52,49 @@ function ListadoLibros() {
         <i className="bi bi-book-half me-2"></i>
         Listado de Libros
       </h2>
-      <table className="table table-dark table-striped table-bordered">
-        <thead className="table-primary">
-          <tr>
-            <th>ID</th>
-            <th>Título</th>
-            <th>Autor</th>
-            <th>Rating</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {libros.map((libro) => (
-            <tr key={libro.id}>
-              <td>{libro.id}</td>
-              <td>{libro.titulo}</td>
-              <td>{libro.autor}</td>
-              <td>{libro.rating}</td>
-              <td className="d-flex gap-2"> {/* [MODIFICADO] */}
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => navegar(`/editar/${libro.id}`)}
-                >
-                  <i className="bi bi-pencil-square me-1"></i>
-                  Editar
-                </button>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => manejarEliminar(libro.id)}
-                >
-                  <i className="bi bi-trash me-1"></i>
-                  Eliminar
-                </button>
-              </td>
+
+      {libros.length === 0 ? (
+        <p className="text-center">No hay libros registrados 📚</p>
+      ) : (
+        <table className="table table-dark table-striped table-bordered">
+          <thead className="table-primary">
+            <tr>
+              <th>ID</th>
+              <th>Título</th>
+              <th>Autor</th>
+              <th>Rating</th>
+              <th>Acciones</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {libros.map((libro) => (
+              <tr key={libro.id}>
+                <td>{libro.id}</td>
+                <td>{libro.titulo}</td>
+                <td>{libro.autor}</td>
+                <td>{libro.rating}</td>
+                <td className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => navegar(`/editar/${libro.id}`)}
+                  >
+                    <i className="bi bi-pencil-square me-1"></i>
+                    Editar
+                  </button>
+
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => manejarEliminar(libro.id)}
+                  >
+                    <i className="bi bi-trash me-1"></i>
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }
